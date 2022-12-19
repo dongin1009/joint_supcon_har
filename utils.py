@@ -30,9 +30,9 @@ class SupervisedContrastiveLoss(tf.keras.losses.Loss):
         return tfa.losses.npairs_loss(tf.squeeze(labels), logits)
  
 def model_evaluation(model, history, x_test, y_classified, y_contrastive=None):
-    print("[Val Acc Max Index] :", max(range(len(history.history['val_accuracy'])), key=lambda i: history.history['val_accuracy'][i]))
-    print("[Val Loss Min Index] :", min(range(len(history.history['val_loss'])), key=lambda i: history.history['val_loss'][i]))
-    print("Max Valid Acc : ", max(history.history['val_loss']))
+    #print("[Val Acc Max Index] :", max(range(len(history.history['val_accuracy'])), key=lambda i: history.history['val_accuracy'][i]))
+    #print("[Val Loss Min Index] :", min(range(len(history.history['val_loss'])), key=lambda i: history.history['val_loss'][i]))
+    #print("Max Valid Acc : ", max(history.history['val_loss']))
     if y_contrastive is not None:
         test_results = model.evaluate([x_test], [y_classified, y_contrastive])
         y_pred = model.predict([x_test])[0]

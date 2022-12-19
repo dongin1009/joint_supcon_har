@@ -5,7 +5,7 @@ import random
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint
 
-from models.make_model import create_encoder, create_classifier, add_contrastive_head
+from models.make_model import create_encoder, create_classifier, add_contrastive_head, joint_supcon
 from utils import HARDataset, SupervisedContrastiveLoss, model_evaluation
 
 import argparse
@@ -32,12 +32,13 @@ def main(args):
 
 		model = create_classifier(args.model, encoder, input_shape, num_class=len(np.unique(y_train)), trainable=False)
 		model.compile(loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=args.lr*args.alpha), metrics=["accuracy"])
-		
+
 	elif args.train_type == 'joint_supcon':
-		cls = create_classifier(args.model, encoder, input_shape, num_class=len(np.unique(y_train)), trainable=True)
-		con = add_contrastive_head(args.model, encoder, input_shape, args.contrastive_features)
-		model = tf.keras.Model(inputs=tf.keras.Input(shape=input_shape), outputs=[cls.outputs, con.outputs])
-		model.compile(loss=["sparse_categorical_crossentropy", SupervisedContrastiveLoss()], loss_weights=[args.alpha, 1-args.alpha], optimizer=tf.keras.optimizers.Adam(learning_rate=args.lr), metrics=["accuracy"])
+		model = joint_supcon(args.model, encoder, input_shape, num_class=len(np.unique(y_train)), contrastive_shape=args.contrastive_features)
+#		cls = create_classifier(args.model, encoder, input_shape, num_class=len(np.unique(y_train)), trainable=True)
+#		con = add_contrastive_head(args.model, encoder, input_shape, args.contrastive_features)
+#		model = tf.keras.Model(inputs=tf.keras.Input(shape=input_shape), outputs=[cls.outputs, con.outputs])
+		model.compile(loss=["sparse_categorical_crossentropy", SupervisedContrastiveLoss()], loss_weights=[args.alpha, 1-args.alpha], optimizer=tf.keras.optimizers.Adam(learning_rate=args.lr), metrics=["accuracy", None])
 	
 	checkpoint = ModelCheckpoint(filepath, verbose = args.verbose, monitor='val_loss', mode="min", save_best_only=True, save_weights_only = True)
 	#earlystopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=30, mode='min', restore_best_weights=True)

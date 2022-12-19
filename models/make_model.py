@@ -52,3 +52,27 @@ def add_contrastive_head(encoder_name, encoder, input_shape, output_shape):
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="encoder_with_projection-head")
     return model
 
+def joint_supcon(encoder_name, encoder, input_shape, num_class, contrastive_shape):
+    inputs = tf.keras.Input(shape=input_shape)
+    features = encoder(inputs)
+    cls_features, con_features = features, features
+    if encoder_name == 'self_attention':
+        cls_features = tf.keras.layers.Dense(num_class*4, activation='relu')(cls_features)
+        cls_features = tf.keras.layers.Dropout(0.2)(cls_features)
+        
+    elif encoder_name == 'multibranch':
+        x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True))(cls_features)
+        x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32, return_sequences=False))(x)
+        x = tf.keras.layers.Dense(128)(x)
+        cls_features = tf.keras.layers.BatchNormalization()(x)
+    
+    cls_features = tf.keras.layers.Dense(num_class, activation='softmax', name="classified")(cls_features)
+    
+    if encoder_name == 'multibranch':
+        con_features = tf.keras.layers.GlobalAveragePooling1D()(con_features)
+    x = tf.keras.layers.LayerNormalization()(con_features)
+    nonactivated = tf.keras.layers.Dense(contrastive_shape)(x)
+    con_features = tf.keras.layers.Activation("relu", name="contrastive")(nonactivated)
+    
+    model = tf.keras.Model(inputs=inputs, outputs=[cls_features, con_features], name="joint-supcon")
+    return model
